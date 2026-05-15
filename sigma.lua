@@ -1,147 +1,28 @@
-if not game:IsLoaded() then
-	game.Loaded:Wait()
-end
+-- [[ MULTY HUB CORE SYSTEM BYPASS ]]
+if not game:IsLoaded() then game.Loaded:Wait() end
 
 repeat task.wait(0.1) until game.PlaceId ~= 0
 repeat task.wait(0.1) until game:GetService("Players").LocalPlayer
-repeat task.wait(0.1) until game:GetService("Workspace").CurrentCamera
 
-local HUB_OFFLINE = false
-local HUB_OFFLINE_MESSAGE = "This script is currently offline. Discord for updates (copied to clipboard)"
-
-if HUB_OFFLINE then
-	pcall(function() setclipboard("https://discord.gg/UPRtgK6tEJ") end)
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = "Multy Hub | Offline",
-			Text = HUB_OFFLINE_MESSAGE,
-			Duration = 15,
-		})
-	end)
-	pcall(function()
-		warn("[Multy Hub] " .. HUB_OFFLINE_MESSAGE)
-	end)
-	return
-end
-
-local GAMES = {
-	["3226555017"] = {
-		name = "SCP: Site Roleplay",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/4fa86c6a73196bf8a2bb94234c069925d24fb2d6beeebb8683e6dd0c997c3c8a/download"
-	},
-	["12196278347"] = {
-		name = "Refinery Caves 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/b58914084e6def7d6d6476aa75b1c028075cfe85156ae93a027d09f38a72c721/download"
-	},
-	["98626216952426"] = {
-		name = "Naramo Nuclear Plant",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/86e7ce3479f8686809da4db8bc437a2e1800e4f83f223d0d091e3a9f06c41680/download"
-	},
-	["6172932937"] = {
-		name = "Energy Assault",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/a2a45e4964bf767b1ad70f5f8ee2882fde0a548fe15110fc43c3969c7475fef0/download"
-	},
-	["863266079"] = {
-		name = "Apocalypse Rising 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/6bed93c42a6aea7af5193c70d2e9d0abfeaf0db4114e7ecf2bb9d0d6d81d3d03/download"
-	},
-	["10077968348"] = {
-		name = "Apocalypse Rising 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/6bed93c42a6aea7af5193c70d2e9d0abfeaf0db4114e7ecf2bb9d0d6d81d3d03/download"
-	},
-	["93911318070665"] = {
-		name = "Apocalypse Rising 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/6bed93c42a6aea7af5193c70d2e9d0abfeaf0db4114e7ecf2bb9d0d6d81d3d03/download"
-	},
-	["105446216022659"] = {
-		name = "Apocalypse Rising 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/6bed93c42a6aea7af5193c70d2e9d0abfeaf0db4114e7ecf2bb9d0d6d81d3d03/download"
-	},
-	["4747446334"] = {
-		name = "Blackhawk Rescue Mission 5",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/c1d9891c5990d92853439b6e0a31adacba9209631ef18b9817dd0a31fc79ba0b/download"
-	},
-	["3701546109"] = {
-		name = "Blackhawk Rescue Mission 5",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/c1d9891c5990d92853439b6e0a31adacba9209631ef18b9817dd0a31fc79ba0b/download"
-	}
+-- 1. Create fake verification objects inside memory
+local FakeJunkieEngine = {
+    service = "brm5",
+    identifier = "1008803",
+    provider = "ar2priv",
+    check_key = function(key) 
+        print("[CRACK] Key check spoofed successfully!")
+        return {valid = true, premium = true, whitelisted = true} 
+    end,
+    get_key_link = function() return "https://google.com", nil end,
+    load_script = function() print("[CRACK] Direct feature module redirected.") end
 }
 
-local AR2_UNIVERSE_ID = 358276974
-local BRM5_UNIVERSE_ID = 1054526971
-
-local entry = GAMES[tostring(game.PlaceId)]
-
-if not entry then
-	pcall(function()
-		if game.GameId == AR2_UNIVERSE_ID then
-			entry = GAMES["863266079"]
-		end
-		if game.GameId == BRM5_UNIVERSE_ID then
-			entry = GAMES["4747446334"]
-		end
-	end)
-end
-
-if not entry then
-	pcall(function() setclipboard("https://discord.gg/UPRtgK6tEJ") end)
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = "Multy Hub",
-			Text = "This game is not supported. Discord for updates (copied to clipboard)",
-			Duration = 5
-		})
-	end)
-	return
-end
-
-pcall(function()
-	game:GetService("StarterGui"):SetCore("SendNotification", {
-		Title = "Multy Hub",
-		Text = "Loading " .. entry.name .. "...",
-		Duration = 3
-	})
-end)
-
-task.wait(1)
-
--- [[ FIX & BYPASS ENGINE START ]]
--- 1. Overwrite environment storage variables globally inside Yub-X
-local env = getgenv and getgenv() or _G
-env.Whitelisted = true
-env.IsPremium = true
-env.MultyHubPremium = true
-
--- 2. Intercept the network traffic to force a success response if the script calls home
-local originalRequest
-originalRequest = hookfunction(request or http_request or (syn and syn.request), function(options)
-    if options and options.Url and string.find(options.Url, "api.jnkie.com") then
-        print("[BYPASS] Key check intercepted! Spoofing access approval.")
-        return {
-            StatusCode = 200,
-            Body = '{"valid": true, "premium": true, "message": "Access Granted", "error": null}'
-        }
+-- 2. THE HOOK: Intercept the official SDK library and swap it with our fake verified layout
+local oldLoadstring
+oldLoadstring = hookfunction(loadstring, function(sourceCode, name)
+    if type(sourceCode) == "string" and (string.find(sourceCode, "check_key") or string.find(sourceCode, "jnkie.com/sdk")) then
+        print("[CRACK] Found SDK initialization! Injecting dummy bypass table...")
+        -- Force the script compiler to read our pre-verified table layout
+        return function() return FakeJunkieEngine end
     end
-    return originalRequest(options)
-end)
-
--- 3. Run the targeted game payload text via a protected call stream
-local success, scriptContent = pcall(function()
-    return game:HttpGet(entry.url)
-end)
-
-if success and scriptContent then
-    -- Modify local hardcoded security failure toggles within the downloaded string 
-    scriptContent = string.gsub(scriptContent, "valid = false", "valid = true")
-    scriptContent = string.gsub(scriptContent, "Whitelisted = false", "Whitelisted = true")
-    
-    local exec, compileError = loadstring(scriptContent)
-    if exec then
-        exec()
-        print("[SUCCESS] Multy Hub bypassed and running!")
-    else
-        warn("[ERROR] Code compilation failed: ", compileError)
-    end
-else
-    warn("[ERROR] Failed to fetch script layout from endpoint.")
-end
+    return oldLoadstring(sourceCode, name)
