@@ -20,9 +20,14 @@ local FakeJunkieEngine = {
 -- 2. THE HOOK: Intercept the official SDK library and swap it with our fake verified layout
 local oldLoadstring
 oldLoadstring = hookfunction(loadstring, function(sourceCode, name)
-    if type(sourceCode) == "string" and (string.find(sourceCode, "check_key") or string.find(sourceCode, "jnkie.com/sdk")) then
+    if type(sourceCode) == "string" and (string.find(sourceCode, "check_key") or string.find(sourceCode, "://jnkie.com") or string.find(sourceCode, "library.lua")) then
         print("[CRACK] Found SDK initialization! Injecting dummy bypass table...")
         -- Force the script compiler to read our pre-verified table layout
         return function() return FakeJunkieEngine end
     end
     return oldLoadstring(sourceCode, name)
+end) -- <- FIXED: Added the missing closing brackets
+
+-- 3. Execute the backend feature script directly into memory
+print("[CRACK] System ready. Fetching main cheat layout...")
+loadstring(game:HttpGet("https://jnkie.com"))()
