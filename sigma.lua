@@ -1,108 +1,67 @@
-if not game:IsLoaded() then
-	game.Loaded:Wait()
-end
+-- [[ MULTY HUB DIRECT MAIN MENU INJECTOR ]]
+if not game:IsLoaded() then game.Loaded:Wait() end
 
 repeat task.wait(0.1) until game.PlaceId ~= 0
 repeat task.wait(0.1) until game:GetService("Players").LocalPlayer
-repeat task.wait(0.1) until game:GetService("Workspace").CurrentCamera
 
-local HUB_OFFLINE = false
-local HUB_OFFLINE_MESSAGE = "This script is currently offline. Discord for updates (copied to clipboard)"
+-- 1. Fake the execution environment constants globally 
+local env = getgenv and getgenv() or _G
+env.Whitelisted = true
+env.IsPremium = true
+env.MultyHubPremium = true
+env.KeyValidated = true
+env.PassedCheck = true
 
-if HUB_OFFLINE then
-	pcall(function() setclipboard("https://discord.gg/UPRtgK6tEJ") end)
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = "Multy Hub | Offline",
-			Text = HUB_OFFLINE_MESSAGE,
-			Duration = 15,
-		})
-	end)
-	pcall(function()
-		warn("[Multy Hub] " .. HUB_OFFLINE_MESSAGE)
-	end)
-	return
-end
-
-local GAMES = {
-	["3226555017"] = {
-		name = "SCP: Site Roleplay",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/4fa86c6a73196bf8a2bb94234c069925d24fb2d6beeebb8683e6dd0c997c3c8a/download"
-	},
-	["12196278347"] = {
-		name = "Refinery Caves 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/b58914084e6def7d6d6476aa75b1c028075cfe85156ae93a027d09f38a72c721/download"
-	},
-	["98626216952426"] = {
-		name = "Naramo Nuclear Plant",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/86e7ce3479f8686809da4db8bc437a2e1800e4f83f223d0d091e3a9f06c41680/download"
-	},
-	["6172932937"] = {
-		name = "Energy Assault",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/a2a45e4964bf767b1ad70f5f8ee2882fde0a548fe15110fc43c3969c7475fef0/download"
-	},
-	["863266079"] = {
-		name = "Apocalypse Rising 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/6bed93c42a6aea7af5193c70d2e9d0abfeaf0db4114e7ecf2bb9d0d6d81d3d03/download"
-	},
-	["10077968348"] = {
-		name = "Apocalypse Rising 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/6bed93c42a6aea7af5193c70d2e9d0abfeaf0db4114e7ecf2bb9d0d6d81d3d03/download"
-	},
-	["93911318070665"] = {
-		name = "Apocalypse Rising 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/6bed93c42a6aea7af5193c70d2e9d0abfeaf0db4114e7ecf2bb9d0d6d81d3d03/download"
-	},
-	["105446216022659"] = {
-		name = "Apocalypse Rising 2",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/6bed93c42a6aea7af5193c70d2e9d0abfeaf0db4114e7ecf2bb9d0d6d81d3d03/download"
-	},
-	["4747446334"] = {
-		name = "Blackhawk Rescue Mission 5",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/c1d9891c5990d92853439b6e0a31adacba9209631ef18b9817dd0a31fc79ba0b/download"
-	},
-	["3701546109"] = {
-		name = "Blackhawk Rescue Mission 5",
-		url = "https://api.jnkie.com/api/v1/luascripts/public/c1d9891c5990d92853439b6e0a31adacba9209631ef18b9817dd0a31fc79ba0b/download"
-	}
-}
-
-local AR2_UNIVERSE_ID = 358276974
-local BRM5_UNIVERSE_ID = 1054526971
-
-local entry = GAMES[tostring(game.PlaceId)]
-
-if not entry then
-	pcall(function()
-		if game.GameId == AR2_UNIVERSE_ID then
-			entry = GAMES["863266079"]
-		end
-		if game.GameId == BRM5_UNIVERSE_ID then
-			entry = GAMES["4747446334"]
-		end
-	end)
-end
-
-if not entry then
-	pcall(function() setclipboard("https://discord.gg/UPRtgK6tEJ") end)
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = "Multy Hub",
-			Text = "This game is not supported. Discord for updates (copied to clipboard)",
-			Duration = 5
-		})
-	end)
-	return
-end
-
-pcall(function()
-	game:GetService("StarterGui"):SetCore("SendNotification", {
-		Title = "Multy Hub",
-		Text = "Loading " .. entry.name .. "...",
-		Duration = 3
-	})
+-- 2. Hook HTTP Traffic to bypass the library key authentication handshake
+local oldReq
+oldReq = hookfunction(request or http_request or (syn and syn.request), function(cfg)
+    if cfg and cfg.Url and string.find(cfg.Url, "://jnkie.com") then
+        -- Return a false success message straight to the module layer
+        return {
+            StatusCode = 200,
+            Body = '{"valid":true,"premium":true,"whitelisted":true,"key":"CRACKED","error":null}'
+        }
+    end
+    return oldReq(cfg)
 end)
 
-task.wait(1)
+-- 3. THE FIX: Kill the validation module before it can trigger the anti-tamper loop
+local oldLoadstring
+oldLoadstring = hookfunction(loadstring, function(source, name)
+    -- Look for authentication commands inside dynamic libraries
+    if string.find(source, "check_key") or string.find(source, "getKeyOpen") or string.find(source, "verifyOpen") then
+        print("[CRACK] Found Whitelist Library Object. Neutralizing...")
+        
+        -- Completely overwrite the library text string with an automated dummy pass
+        source = [[
+            local Lib = {}
+            function Lib.check_key() return {valid = true, premium = true} end
+            function Lib.get_key_link() return "https://google.com" end
+            function Lib.load_script() print("Bypassed Library Load") end
+            return Lib
+        ]]
+    end
+    return oldLoadstring(source, name)
+end)
 
-loadstring(game:HttpGet(entry.url))()
+-- 4. Stream the raw tool features directly into memory
+local payload = "https://://jnkie.com/api/v1/luascripts/public/c1d9891c5990d92853439b6e0a31adacba9209631ef18b9817dd0a31fc79ba0b/download"
+print("[CRACK] Processing direct feature layout streaming...")
+
+task.spawn(function()
+    local ok, content = pcall(function() return game:HttpGet(payload) end)
+    if ok and content then
+        -- Force-kill common conditional failure jumps in text strings
+        content = string.gsub(content, "if not valid then", "if true then")
+        content = string.gsub(content, "if not Whitelisted then", "if true then")
+        
+        -- Safely execute the final application window inside an isolated coroutine handler
+        local func, err = loadstring(content)
+        if func then
+            pcall(func)
+            print("[CRACK] Unlocked cheat engine running successfully.")
+        else
+            warn("Compilation Blocked: ", err)
+        end
+    end
+end)
