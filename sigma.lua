@@ -1,68 +1,50 @@
--- [[ MULTY HUB STABLE RUNTIME EXPLOITER ]]
+-- [[ MULTY HUB HANDSHAKE EMULATOR ]]
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 repeat task.wait(0.1) until game.PlaceId ~= 0
 repeat task.wait(0.1) until game:GetService("Players").LocalPlayer
 
--- 1. Establish absolute environment premium bypass parameters
+-- 1. Inject global parameters to override security checks
 local env = getgenv and getgenv() or _G
 env.Whitelisted = true
 env.IsPremium = true
 env.MultyHubPremium = true
 env.KeyValidated = true
 
--- 2. Mock a fully successful offline authorization module structure 
-local FakeLibrary = {
-    check_key = function() return {valid = true, premium = true, whitelisted = true} end,
-    get_key_link = function() return "https://google.com", nil end,
-    load_script = function() print("[BYPASS] Core script thread redirected.") end
-}
-
--- 3. Intercept compilation requests and inject the functional mock module
-local oldLoadstring
-oldLoadstring = hookfunction(loadstring, function(source, name)
-    if type(source) == "string" and (string.find(source, "check_key") or string.find(source, "verifyOpen")) then
-        print("[CRACK] Whitelist Library Intercepted. Injecting bypass table...")
-        -- Force the compiler to load our pre-built verified runtime table
-        return function() return FakeLibrary end
-    end
-    return oldLoadstring(source, name)
-end)
-
--- 4. Overwrite HTTP requests to intercept background verification routines
-local oldRequest
-oldRequest = hookfunction(request or http_request or (syn and syn.request), function(cfg)
-    if cfg and cfg.Url and string.find(cfg.Url, "://jnkie.com") then
+-- 2. Hook and bypass the Junkie Dev key verification system API response
+local oldReq
+oldReq = hookfunction(request or http_request or (syn and syn.request), function(cfg)
+    if cfg and cfg.Url and string.find(cfg.Url, "api.jnkie.com") then
+        print("[CRACK] Spoofing server handshake verification...")
+        -- Provide exactly what WindUI / Junkie expects for an authorized premium user
         return {
             StatusCode = 200,
-            Body = '{"valid":true,"premium":true,"whitelisted":true,"status":"success","error":null}'
+            Headers = {["content-type"] = "application/json"},
+            Body = '{"valid":true,"premium":true,"status":"success","message":"Key validated successfully!","whitelisted":true,"error":null}'
         }
     end
-    return oldRequest(cfg)
+    return oldReq(cfg)
 end)
 
--- 5. Force-load the main cheat options panel directly through an isolated routine
-local payloadURL = "https://://jnkie.com/api/v1/luascripts/public/c1d9891c5990d92853439b6e0a31adacba9209631ef18b9817dd0a31fc79ba0b/download"
-print("[CRACK] Opening runtime environment channel...")
+-- 3. Standard Game URL Lookup from your original loader layout
+local GAMES = {
+	["4747446334"] = { name = "Blackhawk Rescue Mission 5", url = "https://jnkie.com" },
+	["3701546109"] = { name = "Blackhawk Rescue Mission 5", url = "https://jnkie.com" }
+}
+local entry = GAMES[tostring(game.PlaceId)] or GAMES["4747446334"]
 
+print("[CRACK] Fetching source engine payload modules...")
 task.spawn(function()
-    local success, content = pcall(function() return game:HttpGet(payloadURL) end)
-    if success and content then
-        local compiledFunction, err = loadstring(content)
-        if compiledFunction then
-            print("[CRACK] Initializing cheat window threads...")
-            
-            -- Run the main script body safely using a protected coroutine handler
-            coroutine.wrap(function()
-                local ok, runErr = pcall(compiledFunction)
-                if not ok then
-                    warn("[CRACK] Thread wrapper crash absorbed: ", runErr)
-                end
-            end)()
+    local ok, sourceCode = pcall(function() return game:HttpGet(entry.url) end)
+    if ok and sourceCode then
+        local compiled, err = loadstring(sourceCode)
+        if compiled then
+            print("[CRACK] Launching main menu window execution...")
+            pcall(compiled)
         else
-            warn("[CRACK] Engine compilation blocked: ", err)
+            warn("[CRACK] Main file compilation failed: ", err)
         end
     else
-        warn("[CRACK] Unable to download main script structure.")
+        warn("[CRACK] Failed to reach download server pipeline.")
     end
 end)
